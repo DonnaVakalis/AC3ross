@@ -1,0 +1,8 @@
+# Python dependencies for crossword generator
+
+# Core dependencies
+# Add your dependencies here as you develop
+# Example:
+# numpy>=1.20.0
+# requests>=2.25.0
+

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-CLI tool to generate crossword puzzles
+Command line tool to generate crossword puzzles
+Example:
+python scripts/generate.py --width 15 --height 15 --theme PYTHON CODING AI --output output/puzzle.json
 """
 
 import argparse

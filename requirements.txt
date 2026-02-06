@@ -1,8 +1,14 @@
 # Python dependencies for crossword generator
 
-# Core dependencies
-# Add your dependencies here as you develop
-# Example:
-# numpy>=1.20.0
-# requests>=2.25.0
+# Core
+numpy>=1.24.0          # Array operations (optional, for efficiency)
+
+# API access  
+requests>=2.31.0       # For Datamuse API
+
+# Development
+pytest>=7.4.0          # Testing
+pytest-cov>=4.1.0      # Test coverage
+black>=23.0.0          # Code formatting
+flake8>=6.0.0          # Linting
 

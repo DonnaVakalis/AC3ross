@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script: Download word lists
+One-time setup script: Download the ENABLE word list
 """
 
 import os

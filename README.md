@@ -1,6 +1,6 @@
 # Gridiculous! AC-3 powered crossword construction, with AI-assisted theming and clueing.
 
-Deets: theme-forward puzzles using classic Constraint Satisfaction Problem (CSP) techniques—fast iterations, solid fill, and room to grow into a full “constructor’s workbench” including LLM-assisted theme/clue tooling. When it's done it will supported alphanumeric entries and dynamic theme-based word scoring! 
+Deets: Themed puzzles using classic Constraint Satisfaction Problem (CSP) techniques...and room to grow into a full “constructor’s workbench” including LLM-assisted theme/clue tooling. When it's done it will supported alphanumeric entries and dynamic theme-based word scoring! 
 
 ## Overview
 Generates crossword puzzles using:
@@ -10,7 +10,20 @@ Generates crossword puzzles using:
 - Automatic clue generation
 - Support for letters and digits in the answers  
 
+# Basic generation
+python scripts/generate.py --output my_puzzle.json
 
+# With theme
+python scripts/generate.py \
+  --theme "Space Exploration" \
+  --theme-words "ASTRONAUT,SPACECRAFT" \
+  --size 15 \
+  --output space_puzzle.json
+
+# From theme file
+python scripts/generate.py \
+  --theme-file data/examples/themes/ai_theme.json \
+  --output ai_puzzle.json
 
 ## Project Structure
 

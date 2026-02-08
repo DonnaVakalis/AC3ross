@@ -3,48 +3,30 @@
 One-time setup script: Download the ENABLE word list
 """
 
-import os
-import sys
-import urllib.request
+import requests
 from pathlib import Path
 
-
-def download_enable_wordlist(output_path: str) -> None:
-    """
-    Download the ENABLE word list.
+def download_enable_wordlist():
+    """Download ENABLE word list to data/word_lists/enable.txt"""
     
-    Args:
-        output_path: Path where word list will be saved
-    """
-    enable_url = "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt"
+    url = "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt"
+    output_path = Path(__file__).parent.parent / "data" / "word_lists" / "enable.txt"
     
-    print(f"Downloading ENABLE word list to {output_path}...")
-    try:
-        urllib.request.urlretrieve(enable_url, output_path)
-        print(f"Successfully downloaded word list to {output_path}")
-    except Exception as e:
-        print(f"Error downloading word list: {e}")
-        sys.exit(1)
-
-
-def main():
-    """Main function"""
-    # Get the project root directory (parent of scripts/)
-    project_root = Path(__file__).parent.parent
-    word_list_dir = project_root / "data" / "word_lists"
-    word_list_dir.mkdir(parents=True, exist_ok=True)
+    # Create directory if doesn't exist
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    enable_path = word_list_dir / "enable.txt"
+    print(f"Downloading ENABLE word list from {url}...")
+    response = requests.get(url)
+    response.raise_for_status()
     
-    if enable_path.exists():
-        response = input(f"{enable_path} already exists. Overwrite? (y/n): ")
-        if response.lower() != 'y':
-            print("Skipping download.")
-            return
+    # Write to file
+    output_path.write_text(response.text)
     
-    download_enable_wordlist(str(enable_path))
-
+    # Count words
+    words = response.text.strip().split('\n')
+    print(f"✓ Downloaded {len(words):,} words to {output_path}")
+    
+    return output_path
 
 if __name__ == "__main__":
-    main()
-
+    download_enable_wordlist()

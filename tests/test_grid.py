@@ -176,3 +176,59 @@ def test_is_filled():
     grid.set_cell(1, 1, '#')
     assert grid.is_filled(1, 1) == False  # Black squares aren't "filled"
 
+# tests/test_grid.py
+
+def test_extract_slots_simple():
+    """Test extracting slots from a simple grid."""
+    grid = CrosswordGrid(5)
+    # Create simple pattern: no black squares
+    slots = grid.extract_slots()
+    
+    # Should have slots across and down
+    across_slots = [s for s in slots if s.direction == 'across']
+    down_slots = [s for s in slots if s.direction == 'down']
+    
+    assert len(across_slots) == 5  # One per row
+    assert len(down_slots) == 5    # One per column
+
+
+def test_extract_slots_with_blacks():
+    """Test extracting slots with black squares."""
+    grid = CrosswordGrid(5)
+    grid.set_black_square(0, 2)  # Breaks first row
+    
+    slots = grid.extract_slots()
+    
+    # First row should now have 0 slots (segments too short: 2 letters each)
+    first_row_across = [s for s in slots if s.row == 0 and s.direction == 'across']
+    assert len(first_row_across) == 0  # Both segments < 3 letters
+
+
+def test_calculate_overlaps():
+    """Test calculating slot intersections."""
+    grid = CrosswordGrid(5)
+    slots = grid.extract_slots()
+    overlaps = grid.calculate_overlaps(slots)
+    
+    # Should have overlaps (grid has no black squares, so all across/down cross)
+    assert len(overlaps) > 0
+    
+    # Check an overlap exists
+    across_slot = [s for s in slots if s.direction == 'across'][0]
+    down_slot = [s for s in slots if s.direction == 'down'][0]
+    
+    # They should overlap if they're both in grid
+    assert (across_slot, down_slot) in overlaps or (down_slot, across_slot) in overlaps
+
+
+def test_slot_minimum_length():
+    """Test that slots shorter than 3 letters are ignored."""
+    grid = CrosswordGrid(5)
+    # Create pattern with 2-letter gaps
+    grid.set_black_square(0, 2)
+    grid.set_black_square(0, 0)  # Leaves only 1 white square at (0,1)
+    
+    slots = grid.extract_slots()
+    
+    # No slot should have length < 3
+    assert all(s.length >= 3 for s in slots)

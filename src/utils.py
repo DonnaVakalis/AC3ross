@@ -4,19 +4,7 @@ Helper functions
 from pathlib import Path
 from typing import List, Dict, Set
 
-def load_word_list(filepath: str) -> list:
-    """
-    Load word list from file.
-    
-    Args:
-        filepath: Path to word list file
-    
-    Returns:
-        List of words
-    """
-    pass
-
-
+ 
 def save_puzzle(puzzle: dict, filepath: str) -> None:
     """
     Save puzzle to file (JSON format).
@@ -41,50 +29,78 @@ def load_puzzle(filepath: str) -> dict:
     pass
 
 
-def load_word_list(filepath: str = None, min_length: int = 3, max_length: int = 21) -> List[str]:
+def load_word_list(
+    base_list: str = None,
+    custom_lists: List[str] = None,
+    min_length: int = 3,
+    max_length: int = 21
+) -> List[str]:
     """
-    Load word list from file.
+    Load word list(s) and merge them.
     
     Args:
-        filepath: Path to word list file. If None, uses default ENABLE list.
-        min_length: Minimum word length to include (default 3)
-        max_length: Maximum word length to include (default 21)
+        base_list: Path to base word list (default: ENABLE)
+        custom_lists: List of paths to additional word lists to merge
+        min_length: Minimum word length
+        max_length: Maximum word length
     
     Returns:
-        List of words (uppercase, filtered by length)
+        Combined list of words (deduplicated, uppercase)
     
-    Example:
+    Examples:
+
+        # Just base list
         >>> words = load_word_list()
-        >>> len(words)
-        172820
-        >>> words[0]
-        'AA'
+        
+        # Add custom phrases
+        >>> words = load_word_list(
+        ...     custom_lists=['data/word_lists/custom_phrases.txt']
+        ... )
+        
+        # Multiple custom lists
+        >>> words = load_word_list(
+        ...     custom_lists=[
+        ...         'data/word_lists/custom_phrases.txt',
+        ...         'data/word_lists/custom_numeric.txt'
+        ...     ]
+        ... )
+
+    (see scripts folder: download_wordlist.py and create_custom_wordlist_example.py for how to use)
     """
-    if filepath is None:
-        # Default to ENABLE word list
-        filepath = Path(__file__).parent.parent / "data" / "word_lists" / "enable.txt"
+    if base_list is None:
+        base_list = Path(__file__).parent.parent / "data" / "word_lists" / "enable.txt"
     
-    filepath = Path(filepath)
-    if not filepath.exists():
-        raise FileNotFoundError(
-            f"Word list not found at {filepath}. "
-            f"Run 'python scripts/download_wordlist.py' to download it."
-        )
+    # Load base list
+    base_list = Path(base_list)
+    if not base_list.exists():
+        raise FileNotFoundError(f"Base word list not found: {base_list}")
     
-    # Load and process words
-    with open(filepath, 'r') as f:
+    with open(base_list, 'r') as f:
         words = [line.strip().upper() for line in f if line.strip()]
+    
+    # Load and merge custom lists
+    if custom_lists:
+        for custom_path in custom_lists:
+            custom_path = Path(custom_path)
+            if not custom_path.exists():
+                print(f"Warning: Custom list not found: {custom_path}, skipping...")
+                continue
+            
+            with open(custom_path, 'r') as f:
+                custom_words = [line.strip().upper() for line in f if line.strip()]
+                words.extend(custom_words)
+                print(f"Added {len(custom_words):,} words from {custom_path.name}")
     
     # Filter by length
     words = [w for w in words if min_length <= len(w) <= max_length]
     
-    # Remove duplicates (shouldn't be any, but just in case)
+    # Remove duplicates
     words = list(set(words))
     
-    print(f"Loaded {len(words):,} words (length {min_length}-{max_length})")
+    print(f"Total: {len(words):,} unique words (length {min_length}-{max_length})")
     
     return words
-
+   
 
 def words_by_length(words: List[str]) -> Dict[int, Set[str]]:
     """

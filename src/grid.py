@@ -277,3 +277,250 @@ class CrosswordGrid:
         """
         # TODO: Implement algorithmic generation
         raise NotImplementedError("Algorithmic pattern generation not yet implemented")
+
+    def extract_slots(self):
+        """
+        Extract all word slots from the grid pattern.
+        
+        Returns:
+            List of Slot objects representing all across and down words
+        
+        Example:
+            >>> grid = CrosswordGrid(5)
+            >>> grid.generate_pattern()
+            >>> slots = grid.extract_slots()
+            >>> len(slots)
+            20  # Varies based on pattern
+        """
+        slots = []
+        
+        # Extract across slots
+        for row in range(self.height):
+            col = 0
+            while col < self.width:
+                # Skip black squares
+                if self.is_black(row, col):
+                    col += 1
+                    continue
+                
+                # Found start of a potential word
+                start_col = col
+                cells = []
+                
+                # Collect contiguous white squares
+                while col < self.width and not self.is_black(row, col):
+                    cells.append((row, col))
+                    col += 1
+                
+                # Only create slot if length >= 3 (minimum word length)
+                if len(cells) >= 3:
+                    slot = Slot(
+                        row=row,
+                        col=start_col,
+                        direction='across',
+                        length=len(cells),
+                        cells=cells
+                    )
+                    slots.append(slot)
+        
+        # Extract down slots
+        for col in range(self.width):
+            row = 0
+            while row < self.height:
+                # Skip black squares
+                if self.is_black(row, col):
+                    row += 1
+                    continue
+                
+                # Found start of a potential word
+                start_row = row
+                cells = []
+                
+                # Collect contiguous white squares
+                while row < self.height and not self.is_black(row, col):
+                    cells.append((row, col))
+                    row += 1
+                
+                # Only create slot if length >= 3
+                if len(cells) >= 3:
+                    slot = Slot(
+                        row=start_row,
+                        col=col,
+                        direction='down',
+                        length=len(cells),
+                        cells=cells
+                    )
+                    slots.append(slot)
+        
+        return slots
+
+
+    def calculate_overlaps(self, slots):
+        """
+        Calculate which slots intersect and where.
+        
+        Args:
+            slots: List of Slot objects
+        
+        Returns:
+            Dictionary mapping (slot1, slot2) -> (index1, index2)
+            where slot1[index1] and slot2[index2] refer to the same cell
+        
+        Example:
+            >>> overlaps = grid.calculate_overlaps(slots)
+            >>> # If slot1 (across) and slot2 (down) intersect:
+            >>> overlaps[(slot1, slot2)]
+            (2, 0)  # slot1's 3rd letter = slot2's 1st letter
+        """
+        overlaps = {}
+        
+        # Check all pairs of slots
+        for i, slot1 in enumerate(slots):
+            for slot2 in slots[i+1:]:  # Only check each pair once
+                # Slots can only overlap if one is across and one is down
+                if slot1.direction == slot2.direction:
+                    continue
+                
+                # Find intersection
+                for idx1, cell1 in enumerate(slot1.cells):
+                    for idx2, cell2 in enumerate(slot2.cells):
+                        if cell1 == cell2:  # Same cell!
+                            overlaps[(slot1, slot2)] = (idx1, idx2)
+                            overlaps[(slot2, slot1)] = (idx2, idx1)  # Symmetric
+                            break
+        
+        return overlaps
+    
+    #some visualization helper methods
+    def visualize_with_slots(self, slots=None):
+        """
+        Visualize grid with slot numbers.
+        
+        Args:
+            slots: List of Slot objects (if None, extracts them)
+        
+        Shows numbered slots like a real crossword puzzle.
+        """
+        if slots is None:
+            slots = self.extract_slots()
+        
+        # Create a grid of slot numbers
+        slot_numbers = [['' for _ in range(self.width)] for _ in range(self.height)]
+        
+        # Number slots (across first, then down)
+        current_number = 1
+        
+        # Track which cells start slots
+        start_positions = {}
+        for slot in slots:
+            key = (slot.row, slot.col)
+            if key not in start_positions:
+                start_positions[key] = current_number
+                current_number += 1
+        
+        # Assign numbers to grid
+        for (row, col), num in start_positions.items():
+            slot_numbers[row][col] = str(num)
+        
+        # Print grid with numbers
+        print("Grid with slot numbers:")
+        for row in range(self.height):
+            line = ""
+            for col in range(self.width):
+                if self.is_black(row, col):
+                    line += "■■■ "
+                else:
+                    num = slot_numbers[row][col]
+                    if num:
+                        line += f"{num:>2} "
+                    else:
+                        line += "   "
+            print(line)
+        
+        # Print slot legend
+        print("\nSlots:")
+        slot_list = sorted(slots, key=lambda s: (s.row, s.col))
+        for slot in slot_list:
+            num = start_positions[(slot.row, slot.col)]
+            print(f"  {num} {slot.direction}: {slot.length} letters at ({slot.row},{slot.col})")
+
+
+    def visualize_filled(self):
+        """
+        Visualize grid with filled letters (for after solving).
+        
+        Shows actual letters instead of □ symbols.
+        """
+        print("Filled grid:")
+        for row in range(self.height):
+            line = ""
+            for col in range(self.width):
+                cell = self.grid[row][col]
+                if cell == self.BLACK_SQUARE:
+                    line += "■ "
+                elif cell is None:
+                    line += "□ "
+                else:
+                    line += f"{cell} "
+            print(line.rstrip())
+
+
+    def print_grid_info(self):
+        """Print summary information about the grid."""
+        slots = self.extract_slots()
+        overlaps = self.calculate_overlaps(slots)
+        
+        print(f"Grid: {self.width}×{self.height}")
+        print(f"Black squares: {self.count_black_squares()} ({self.count_black_squares()/(self.width*self.height)*100:.1f}%)")
+        print(f"Empty squares: {self.count_empty_squares()}")
+        print(f"Total slots: {len(slots)}")
+        print(f"  Across: {len([s for s in slots if s.direction == 'across'])}")
+        print(f"  Down: {len([s for s in slots if s.direction == 'down'])}")
+        print(f"Overlaps: {len(overlaps)//2}")  # Divide by 2 (stored symmetrically)
+        print(f"Symmetric: {self.check_symmetry()}")
+
+
+
+class Slot:
+    """
+    Represents a word slot in the crossword grid.
+    
+    A slot is a contiguous sequence of cells that forms one answer
+    in the puzzle (either across or down).
+    """
+    
+    def __init__(self, row, col, direction, length, cells):
+        """
+        Initialize a crossword slot.
+        
+        Args:
+            row: Starting row (0-based)
+            col: Starting column (0-based)
+            direction: 'across' or 'down'
+            length: Number of letters in this slot
+            cells: List of (row, col) tuples for each cell in the slot
+        
+        Example:
+            # 3-letter across slot starting at (0, 0)
+            slot = Slot(0, 0, 'across', 3, [(0, 0), (0, 1), (0, 2)])
+        """
+        self.row = row
+        self.col = col
+        self.direction = direction
+        self.length = length
+        self.cells = cells
+    
+    def __repr__(self):
+        """String representation for debugging."""
+        return f"Slot({self.direction[0].upper()}{self.row},{self.col},len={self.length})"
+    
+    def __eq__(self, other):
+        """Two slots are equal if they have the same cells and direction."""
+        if not isinstance(other, Slot):
+            return False
+        return (self.direction == other.direction and 
+                self.cells == other.cells)
+    
+    def __hash__(self):
+        """Make slots hashable (for use in dictionaries/sets)."""
+        return hash((self.direction, tuple(self.cells)))

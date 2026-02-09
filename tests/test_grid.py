@@ -232,3 +232,23 @@ def test_slot_minimum_length():
     
     # No slot should have length < 3
     assert all(s.length >= 3 for s in slots)
+
+def test_max_slot_length():
+    """Test that max_slot_length is enforced."""
+    grid = CrosswordGrid(15, enforce_symmetry=True)
+    grid.generate_pattern(max_slot_length=8)
+    
+    max_length = grid.get_max_slot_length()
+    assert max_length <= 8, f"Found slot with length {max_length}, expected <= 8"
+
+
+def test_get_slot_length_stats():
+    """Test slot length statistics."""
+    grid = CrosswordGrid(10)
+    grid.generate_pattern()
+    
+    stats = grid.get_slot_length_stats()
+    assert stats['min'] >= 3  # Minimum slot length is 3
+    assert stats['max'] > 0
+    assert stats['avg'] > 0
+    assert stats['count'] > 0

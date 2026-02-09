@@ -177,34 +177,42 @@ class CrosswordGrid:
                     mirror_row, mirror_col = self._get_mirror_cell(row, col)
                     self.grid[mirror_row][mirror_col] = self.BLACK_SQUARE
 
-    def generate_pattern(self, method='random', black_percentage=0.17, template=None):
+
+    def generate_pattern(self, method='random', black_percentage=0.17, max_slot_length=None):
         """
         Generate black square pattern.
         
         Args:
             method: 'random', 'template', or 'algorithmic'
             black_percentage: Target percentage of black squares (for random/algorithmic)
-            template: Template data (for template method)
+            max_slot_length: Maximum allowed slot length (None = no limit)
         
         Respects self.enforce_symmetry automatically.
         """
         if method == 'random':
-            self._generate_random_pattern(black_percentage)
+            self._generate_random_pattern(black_percentage, max_slot_length)
         elif method == 'template':
             self._generate_from_template(template)
         elif method == 'algorithmic':
-            self._generate_algorithmic_pattern(black_percentage)
+            self._generate_algorithmic_pattern(black_percentage, max_slot_length)
         else:
             raise ValueError(f"Unknown method: {method}. Use 'random', 'template', or 'algorithmic'")
 
-    def _generate_random_pattern(self, black_percentage):
-        """Generate random black square pattern."""
+
+    def _generate_random_pattern(self, black_percentage, max_slot_length=None):
+        """
+        Generate random black square pattern.
+        
+        Args:
+            black_percentage: Target percentage of black squares
+            max_slot_length: Maximum allowed slot length (None = no limit)
+        """
         import random
         
+        # Generate initial random pattern
         target_blacks = int(self.width * self.height * black_percentage)
         
         if self.enforce_symmetry:
-            # Only iterate through half the grid (symmetry handles the rest)
             half_height = (self.height + 1) // 2
             half_width = (self.width + 1) // 2
             
@@ -245,10 +253,16 @@ class CrosswordGrid:
                     placed += 1
                 
                 attempts += 1
+        
+        # Enforce max slot length if specified
+        if max_slot_length is not None:
+            self._enforce_max_slot_length(max_slot_length)
 
-    def _generate_from_template(self, template):
+
+    def _generate_from_template(self, template): #TODO: do I want to pass the max slot length to this method too?
         """
         Generate pattern from template.
+        
         
         Args:
             template: 2D list or string representation of pattern
@@ -262,7 +276,7 @@ class CrosswordGrid:
         # - File path: "patterns/nyt_15x15_001.txt"
         raise NotImplementedError("Template pattern generation not yet implemented")
 
-    def _generate_algorithmic_pattern(self, black_percentage):
+    def _generate_algorithmic_pattern(self, black_percentage): #TODO: do I want to pass the max slot length to this method too?
         """
         Generate pattern using algorithm (more structured than random).
         
@@ -355,7 +369,84 @@ class CrosswordGrid:
         return slots
 
 
-    def calculate_overlaps(self, slots):
+    def _enforce_max_slot_length(self, max_length):
+        """
+        Add black squares to break up slots that are too long.
+        
+        Args:
+            max_length: Maximum allowed slot length
+        
+        This modifies the grid in place, adding black squares to ensure
+        no slot exceeds max_length.
+        """
+        import random
+        
+        max_iterations = 100
+        iteration = 0
+        
+        while iteration < max_iterations:
+            slots = self.extract_slots()
+            long_slots = [s for s in slots if s.length > max_length]
+            
+            if not long_slots:
+                break  # All slots are within limit
+            
+            # Pick a random long slot to break
+            slot = random.choice(long_slots)
+            
+            # Choose a random position in the middle third of the slot
+            # (Avoid breaking near ends to prevent very short segments)
+            start_idx = slot.length // 3
+            end_idx = 2 * slot.length // 3
+            
+            if end_idx > start_idx:
+                break_idx = random.randint(start_idx, end_idx)
+            else:
+                break_idx = slot.length // 2
+            
+            # Add black square at that position
+            break_row, break_col = slot.cells[break_idx]
+            self.set_black_square(break_row, break_col)
+            
+            iteration += 1
+        
+        if iteration >= max_iterations:
+            print(f"Warning: Could not enforce max_slot_length={max_length} within {max_iterations} iterations")
+
+
+    def get_max_slot_length(self):
+        """
+        Get the length of the longest slot in the current grid.
+        
+        Returns:
+            Maximum slot length, or 0 if no slots exist
+        """
+        slots = self.extract_slots()
+        if not slots:
+            return 0
+        return max(s.length for s in slots)
+
+
+    def get_slot_length_stats(self):
+        """
+        Get statistics about slot lengths in the grid.
+        
+        Returns:
+            Dictionary with min, max, average slot lengths
+        """
+        slots = self.extract_slots()
+        if not slots:
+            return {'min': 0, 'max': 0, 'avg': 0, 'count': 0}
+        
+        lengths = [s.length for s in slots]
+        return {
+            'min': min(lengths),
+            'max': max(lengths),
+            'avg': sum(lengths) / len(lengths),
+            'count': len(slots)
+        }
+
+    def calculate_overlaps(self, slots): #TODO: do I want to pass the max slot length to this method too?
         """
         Calculate which slots intersect and where.
         

@@ -1,12 +1,6 @@
 """LLM-based word scoring for theme relevance."""
 
 import json
-from typing import List, Dict, Optional
-from anthropic import Anthropic
-
-"""LLM-based word scoring for theme relevance."""
-
-import json
 import requests
 from typing import List, Dict, Optional, Literal
 from anthropic import Anthropic

@@ -1,3 +1,6 @@
+# Uncomment to exclude:
+# data/scored_lists/*.json
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,11 +23,13 @@ wheels/
 .installed.cfg
 *.egg
 
+
 # Virtual environments
 venv/
 env/
 ENV/
 .venv
+.env
 
 # IDE
 .vscode/

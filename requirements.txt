@@ -4,7 +4,8 @@
 numpy>=1.24.0          # Array operations (optional, for efficiency)
 
 # API access  
-requests>=2.31.0       # For Datamuse API
+requests>=2.31.0       # For Ollama
+anthropic>=0.18.0      # For Claude API
 
 # Development
 pytest>=7.4.0          # Testing
@@ -12,4 +13,3 @@ pytest-cov>=4.1.0      # Test coverage
 black>=23.0.0          # Code formatting
 flake8>=6.0.0          # Linting
 
-anthropic>=0.18.0      # For Claude API

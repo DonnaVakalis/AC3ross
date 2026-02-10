@@ -12,3 +12,4 @@ pytest-cov>=4.1.0      # Test coverage
 black>=23.0.0          # Code formatting
 flake8>=6.0.0          # Linting
 
+anthropic>=0.18.0      # For Claude API

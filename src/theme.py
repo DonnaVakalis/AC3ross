@@ -43,6 +43,7 @@ class ThemeManager:
         # Word scores: maps word -> score (0-100)
         # 0 = neutral/unrelated, 100 = highly related
         self.word_scores = {}
+        self.metadata = {}
     
     def set_word_score(self, word: str, score: float):
         """
@@ -165,3 +166,150 @@ class ThemeManager:
                 reverse=True
             )[:20]  # Top 20 high-scoring words
         }
+    def save_scores(self, filepath: str, metadata: Dict = None):
+        """
+        Save scored word list to JSON file.
+        
+        Args:
+            filepath: Path to save to (e.g., 'data/scored_lists/ai_scored.json')
+            metadata: Optional additional metadata
+        
+        Example:
+            >>> theme.save_scores(
+            ...     'data/scored_lists/ai_ml_scored.json',
+            ...     metadata={'model_used': 'claude-sonnet-4-20250514'}
+            ... )
+        """
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Build metadata
+        save_metadata = {
+            'theme_description': self.description,
+            'scored_date': datetime.now().isoformat()[:10],
+            'total_words': len(self.word_scores),
+            'theme_words': self.theme_words,
+        }
+        
+        # Add custom metadata
+        if metadata:
+            save_metadata.update(metadata)
+        
+        # Save to JSON
+        data = {
+            'metadata': save_metadata,
+            'scores': self.word_scores
+        }
+        
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+        
+        print(f"✓ Saved {len(self.word_scores)} scored words to {filepath}")
+    
+    def load_scores(self, filepath: str, merge: bool = False):
+        """
+        Load scored word list from JSON file.
+        
+        Args:
+            filepath: Path to load from
+            merge: If True, merge with existing scores. If False, replace.
+        
+        Returns:
+            Metadata dictionary
+        
+        Example:
+            >>> theme = ThemeManager()
+            >>> theme.load_scores('data/scored_lists/ai_ml_scored.json')
+            >>> print(f"Loaded {len(theme.word_scores)} scores")
+        """
+        filepath = Path(filepath)
+        
+        if not filepath.exists():
+            raise FileNotFoundError(f"Scored list not found: {filepath}")
+        
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        
+        # Extract metadata and scores
+        metadata = data.get('metadata', {})
+        scores = data.get('scores', {})
+        
+        if merge:
+            # Merge: keep existing scores, add new ones
+            self.word_scores.update(scores)
+            print(f"✓ Merged {len(scores)} scores from {filepath}")
+        else:
+            # Replace: overwrite existing scores
+            self.word_scores = scores
+            self.description = metadata.get('theme_description', self.description)
+            print(f"✓ Loaded {len(scores)} scores from {filepath}")
+        
+        self.metadata = metadata
+        return metadata
+    
+    @classmethod
+    def load_from_file(cls, filepath: str):
+        """
+        Create ThemeManager from a saved scored list.
+        
+        Args:
+            filepath: Path to scored list JSON
+        
+        Returns:
+            ThemeManager instance with loaded scores
+        
+        Example:
+            >>> theme = ThemeManager.load_from_file('data/scored_lists/ai_ml_scored.json')
+        """
+        theme = cls()
+        theme.load_scores(filepath)
+        return theme
+    
+    def merge_scored_lists(self, filepaths: List[str], strategy: str = 'max'):
+        """
+        Merge multiple scored lists.
+        
+        Args:
+            filepaths: List of paths to scored list files
+            strategy: How to handle conflicts:
+                'max' - Take maximum score (default)
+                'min' - Take minimum score
+                'avg' - Take average score
+                'first' - Take first encountered score
+        
+        Example:
+            >>> theme = ThemeManager(description="Science")
+            >>> theme.merge_scored_lists([
+            ...     'data/scored_lists/ai_scored.json',
+            ...     'data/scored_lists/space_scored.json'
+            ... ], strategy='max')
+        """
+        all_scores = {}
+        
+        for filepath in filepaths:
+            filepath = Path(filepath)
+            
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+                scores = data.get('scores', {})
+            
+            for word, score in scores.items():
+                if word not in all_scores:
+                    all_scores[word] = [score]
+                else:
+                    all_scores[word].append(score)
+        
+        # Apply merge strategy
+        for word, score_list in all_scores.items():
+            if strategy == 'max':
+                self.word_scores[word] = max(score_list)
+            elif strategy == 'min':
+                self.word_scores[word] = min(score_list)
+            elif strategy == 'avg':
+                self.word_scores[word] = sum(score_list) / len(score_list)
+            elif strategy == 'first':
+                self.word_scores[word] = score_list[0]
+            else:
+                raise ValueError(f"Unknown strategy: {strategy}")
+        
+        print(f"Merged {len(filepaths)} scored lists ({len(self.word_scores)} total words)")

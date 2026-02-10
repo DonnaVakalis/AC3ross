@@ -77,7 +77,8 @@ class CrosswordSolver:
                  word_list: List[str], 
                  overlaps: Dict,
                  theme: Optional['ThemeManager'] = None,
-                 theme_assignment: Optional[Dict[Slot, str]] = None):        
+                 theme_assignment: Optional[Dict[Slot, str]] = None,
+                 theme_influence: float = 1.0):        
         """
         Initialize the crossword solver.
         
@@ -87,6 +88,11 @@ class CrosswordSolver:
             overlaps: Dictionary mapping (slot1, slot2) -> (index1, index2)
             theme: ThemeManager instance (optional) for theme-aware solving
             theme_assignment: Dictionary pre-mapping slots to theme words (optional)
+            theme_influence:  How strongly to prefer high-scored words (0.0-10.0)
+                0.0 = ignore scores completely (pure LCV)
+                1.0 = balanced influence (default)
+                5.0 = strong preference for high-scored words
+                10.0 = extreme preference for high-scored words
         Example:
             >>> slots = grid.extract_slots()
             >>> overlaps = grid.calculate_overlaps(slots)
@@ -97,6 +103,7 @@ class CrosswordSolver:
         self.slots = slots
         self.overlaps = overlaps
         self.theme = theme
+        self.theme_influence = theme_influence 
         
         # Organize words by length for fast lookup
         self.words_by_len = words_by_length(word_list)
@@ -146,10 +153,9 @@ class CrosswordSolver:
         """
         Order values for slot using LCV heuristic + theme scoring.
         
-        Combines:
-        - LCV: Prefer words that constrain neighbors less
-        - Theme scoring: Prefer higher-scored words
+        Uses self.theme_influence to control how much theme scores matter.
         """
+        
         def score_word(word):
             """
             Score word for ordering.
@@ -159,6 +165,7 @@ class CrosswordSolver:
             Combines:
             - Conflict count (LCV - fewer conflicts = lower score)
             - Theme score (higher theme relevance = lower final score)
+            - Theme influence (controls how much theme score matters)
             """
             # Count conflicts (LCV heuristic)
             conflicts = 0
@@ -180,10 +187,10 @@ class CrosswordSolver:
             if self.theme:
                 theme_score = self.theme.get_word_score(word)
             
-            # Combine: conflicts (higher = worse) - theme bonus
-            # Theme bonus scaled to make it meaningful but not dominating
-            # Each theme point reduces effective conflicts by ~0.5
-            return conflicts - (theme_score / 200.0) * conflicts
+            # Turn up/down the influence knob 
+            theme_bonus = (theme_score / 100.0) * conflicts * self.theme_influence
+            
+            return conflicts - theme_bonus
         
         # Get valid words
         words = [w for w in self.domains[slot] 
@@ -193,7 +200,6 @@ class CrosswordSolver:
         words.sort(key=score_word)
         
         return words
-
 
 
 

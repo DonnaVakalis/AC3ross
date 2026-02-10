@@ -16,7 +16,7 @@ class LLMWordScorer:
     """
     
     def __init__(self, 
-                 provider: Literal["claude", "ollama"] = "claude",
+                 provider: Literal["claude", "ollama"] = "ollama",
                  api_key: Optional[str] = None,
                  model: str = None,
                  ollama_base_url: str = "http://localhost:11434"):

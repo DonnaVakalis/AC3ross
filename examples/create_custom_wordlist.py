@@ -7,8 +7,14 @@ This script demonstrates how to:
 3. Create theme-specific lists
 4. Load and merge them with the base ENABLE list
 """
-
+import sys
 from pathlib import Path
+
+# Add project root to Python path so we can import src
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from src.utils import load_word_list
 
 def create_example_custom_lists():
@@ -27,7 +33,7 @@ def create_example_custom_lists():
         "NOTEVENCLOSE", # "Not even close"
     ]
     
-    phrases_path = word_lists_dir / "custom_phrases.txt"
+    phrases_path = word_lists_dir / "user_custom_phrases.txt"
     phrases_path.write_text('\n'.join(phrases))
     print(f"✓ Created {phrases_path} with {len(phrases)} phrases")
     
@@ -42,7 +48,7 @@ def create_example_custom_lists():
         "TYPE2",        # As in "Type 2 diabetes"
     ]
     
-    numeric_path = word_lists_dir / "custom_numeric.txt"
+    numeric_path = word_lists_dir / "user_custom_numeric.txt"
     numeric_path.write_text('\n'.join(numeric))
     print(f"✓ Created {numeric_path} with {len(numeric)} entries")
     
@@ -58,7 +64,7 @@ def create_example_custom_lists():
         "LLMS",
     ]
     
-    ai_path = word_lists_dir / "custom_theme_ai.txt"
+    ai_path = word_lists_dir / "user_custom_theme_ai.txt"
     ai_path.write_text('\n'.join(ai_terms))
     print(f"✓ Created {ai_path} with {len(ai_terms)} AI terms")
     
@@ -77,7 +83,7 @@ def demo_loading_custom_lists():
     
     print("\n--- Loading with custom phrases ---")
     words_with_phrases = load_word_list(
-        custom_lists=['data/word_lists/custom_phrases.txt']
+        custom_lists=['data/word_lists/user_custom_phrases.txt']
     )
     print(f"Combined list has: {len(words_with_phrases):,} words")
     print(f"Contains 'IMONIT'? {('IMONIT' in words_with_phrases)}")  # True
@@ -85,9 +91,9 @@ def demo_loading_custom_lists():
     print("\n--- Loading with ALL custom lists ---")
     all_words = load_word_list(
         custom_lists=[
-            'data/word_lists/custom_phrases.txt',
-            'data/word_lists/custom_numeric.txt',
-            'data/word_lists/custom_theme_ai.txt',
+            'data/word_lists/user_custom_phrases.txt',
+            'data/word_lists/user_custom_numeric.txt',
+            'data/word_lists/user_custom_theme_ai.txt',
         ]
     )
     print(f"Full combined list has: {len(all_words):,} words")

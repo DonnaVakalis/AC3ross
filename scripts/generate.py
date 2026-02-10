@@ -5,7 +5,6 @@ Example:
 python scripts/generate.py --width 15 --height 15 --theme PYTHON CODING AI --output output/puzzle.json
 """
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -13,11 +12,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
+import argparse
 from grid import create_grid
 from solver import solve_crossword
 from theme import place_theme_words
 from clues import generate_all_clues
 from utils import load_word_list, save_puzzle
+
 
 
 def generate_crossword(width: int, height: int, word_list_path: str, 

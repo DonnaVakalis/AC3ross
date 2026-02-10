@@ -1,36 +1,39 @@
-"""
-Unit tests for solver.py
-"""
+# tests/test_solver.py
 
-import unittest
-from src.solver import ac3, backtrack_search, solve_crossword
+import pytest
+from src.grid import CrosswordGrid
+from src.solver import CrosswordSolver
+from src.utils import load_word_list
 
 
-class TestSolver(unittest.TestCase):
-    """Test cases for CSP solver"""
+def test_solver_simple_grid():
+    """Test solver on a simple 5x5 grid."""
+    grid = CrosswordGrid(5)
+    grid.set_black_square(2, 2)  # Center black square
     
-    def test_ac3(self):
-        """Test AC-3 algorithm"""
-        constraints = []
-        domains = {}
-        result = ac3(constraints, domains)
-        self.assertIsInstance(result, bool)
+    slots = grid.extract_slots()
+    overlaps = grid.calculate_overlaps(slots)
+    words = load_word_list()
     
-    def test_backtrack_search(self):
-        """Test backtracking search"""
-        assignment = {}
-        csp = {}
-        result = backtrack_search(assignment, csp)
-        self.assertIsNotNone(result)
+    solver = CrosswordSolver(slots, words, overlaps)
+    solution = solver.solve()
     
-    def test_solve_crossword(self):
-        """Test crossword solving"""
-        grid = [[None] * 5 for _ in range(5)]
-        word_list = ["HELLO", "WORLD"]
-        result = solve_crossword(grid, word_list)
-        self.assertIsInstance(result, dict)
+    assert solution is not None
+    assert len(solution) == len(slots)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
+def test_domains_initialized():
+    """Test that domains are initialized correctly."""
+    grid = CrosswordGrid(5)
+    slots = grid.extract_slots()
+    overlaps = grid.calculate_overlaps(slots)
+    words = ['CAT', 'DOG', 'FISH', 'BIRD', 'TIGER']
+    
+    solver = CrosswordSolver(slots, words, overlaps)
+    
+    # All 5x5 grid slots should have length 5
+    for slot in slots:
+        assert slot.length == 5
+        # Should only include 5-letter words
+        assert 'TIGER' in solver.domains[slot]
+        assert 'CAT' not in solver.domains[slot]

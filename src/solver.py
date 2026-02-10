@@ -49,6 +49,13 @@ KEY CONCEPTS:
 - **Arc Consistency**: When two variables overlap, their domains must be compatible
 - **Backtracking**: Recursive search that undoes bad choices and tries alternatives
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path so we can import src
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from typing import List, Dict, Set, Tuple, Optional
 from src.grid import Slot
@@ -65,7 +72,12 @@ class CrosswordSolver:
     - Backtracking: Search with MRV and LCV heuristics
     """
     
-    def __init__(self, slots: List[Slot], word_list: List[str], overlaps: Dict):
+    def __init__(self, 
+                 slots: List[Slot], 
+                 word_list: List[str], 
+                 overlaps: Dict,
+                 theme: Optional['ThemeManager'] = None,
+                 theme_assignment: Optional[Dict[Slot, str]] = None):        
         """
         Initialize the crossword solver.
         
@@ -73,7 +85,8 @@ class CrosswordSolver:
             slots: List of Slot objects to fill
             word_list: List of available words (uppercase)
             overlaps: Dictionary mapping (slot1, slot2) -> (index1, index2)
-        
+            theme: ThemeManager instance (optional) for theme-aware solving
+            theme_assignment: Dictionary pre-mapping slots to theme words (optional)
         Example:
             >>> slots = grid.extract_slots()
             >>> overlaps = grid.calculate_overlaps(slots)
@@ -83,6 +96,7 @@ class CrosswordSolver:
         """
         self.slots = slots
         self.overlaps = overlaps
+        self.theme = theme
         
         # Organize words by length for fast lookup
         self.words_by_len = words_by_length(word_list)
@@ -90,10 +104,106 @@ class CrosswordSolver:
         # Initialize domains: possible words for each slot
         self.domains = self._initialize_domains()
         
+        # If provided, pre-assign theme words
+        self.theme_assignment = theme_assignment or {}
+        if self.theme_assignment:
+            self._apply_theme_assignment()
+
         # Track statistics
         self.backtrack_count = 0
         self.ac3_count = 0
     
+    def _apply_theme_assignment(self):
+        """
+        Apply pre-assigned theme words as hard constraints.
+        
+        For each theme word assignment:
+        1. Lock that slot to only that word
+        2. Constrain overlapping slots based on theme word letters
+        """
+        for slot, theme_word in self.theme_assignment.items():
+            # Lock this slot to the theme word
+            self.domains[slot] = {theme_word}
+            
+            # Constrain overlapping slots
+            for other_slot in self.slots:
+                if other_slot in self.theme_assignment:
+                    continue  # Skip other theme slots
+                
+                if (slot, other_slot) not in self.overlaps:
+                    continue
+                
+                idx1, idx2 = self.overlaps[(slot, other_slot)]
+                required_letter = theme_word[idx1]
+                
+                # Filter other_slot's domain to only words with matching letter
+                self.domains[other_slot] = {
+                    w for w in self.domains[other_slot]
+                    if w[idx2] == required_letter
+                }
+    
+    def _order_domain_values(self, slot: Slot, assignment: Dict[Slot, str]) -> List[str]:
+        """
+        Order values for slot using LCV heuristic + theme scoring.
+        
+        Combines:
+        - LCV: Prefer words that constrain neighbors less
+        - Theme scoring: Prefer higher-scored words
+        """
+        def score_word(word):
+            """
+            Score word for ordering.
+            
+            Lower score = higher priority (tried first).
+            
+            Combines:
+            - Conflict count (LCV - fewer conflicts = lower score)
+            - Theme score (higher theme relevance = lower final score)
+            """
+            # Count conflicts (LCV heuristic)
+            conflicts = 0
+            for neighbor in self.slots:
+                if neighbor in assignment:
+                    continue
+                
+                if (slot, neighbor) not in self.overlaps:
+                    continue
+                
+                idx1, idx2 = self.overlaps[(slot, neighbor)]
+                
+                for neighbor_word in self.domains[neighbor]:
+                    if word[idx1] != neighbor_word[idx2]:
+                        conflicts += 1
+            
+            # Get theme score (0-100, higher = more relevant)
+            theme_score = 0.0
+            if self.theme:
+                theme_score = self.theme.get_word_score(word)
+            
+            # Combine: conflicts (higher = worse) - theme bonus
+            # Theme bonus scaled to make it meaningful but not dominating
+            # Each theme point reduces effective conflicts by ~0.5
+            return conflicts - (theme_score / 200.0) * conflicts
+        
+        # Get valid words
+        words = [w for w in self.domains[slot] 
+                if self._is_consistent(slot, w, assignment)]
+        
+        # Sort by combined score
+        words.sort(key=score_word)
+        
+        return words
+
+
+
+
+
+
+
+
+
+
+
     def _initialize_domains(self) -> Dict[Slot, Set[str]]:
         """
         Initialize domain for each slot (node consistency).
